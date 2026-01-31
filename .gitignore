@@ -1,0 +1,7 @@
+__pycache__/
+*.mp4
+*.wav
+*.srt
+temp_*
+.env
+.venv
