@@ -72,6 +72,16 @@ with st.container():
         end_time = st.text_input("T-Minus End (HH:MM:SS)", value="00:00:20")
         
     ai_mode = st.checkbox("Enable Levitation Subtitles (AI Mode)", value=True, help="Uses Whisper AI to transcribe and burn captions.")
+    
+    if ai_mode:
+        model_options = {
+            "Tiny (Fastest)": "tiny",
+            "Base (Fast)": "base",
+            "Small (Balanced)": "small",
+            "Medium (High Accuracy)": "medium"
+        }
+        selected_model_label = st.selectbox("AI Model Accuracy", list(model_options.keys()), index=2)
+        selected_model = model_options[selected_model_label]
 
 # --- Process Logic ---
 if st.button("INITIATE GRAV-DRIVE 🚀"):
@@ -87,8 +97,8 @@ if st.button("INITIATE GRAV-DRIVE 🚀"):
         status_box = st.status("Initializing Gravity Drive...", expanded=True)
         
         try:
-            # 1. Extraction
-            status_box.write("⏬ [Phase 1] Extracting raw asset from the void...")
+            # 1. Extraction (Turbo Trim)
+            status_box.write("⏬ [Phase 1] Extracting raw asset from the void (Ultrafast Mode)...")
             downloaded = zero_g_download(url, start_time, end_time, clip_file)
             
             if not downloaded:
@@ -96,34 +106,31 @@ if st.button("INITIATE GRAV-DRIVE 🚀"):
                 st.error("Failed to download video. Check URL and timestamps.")
                 st.stop()
                 
-            # 2. Warp
-            status_box.write("📐 [Phase 2] Warping dimensions to 9:16 aspect ratio...")
-            warped = grav_warp_format(clip_file, warp_file)
-            
-            if not warped:
-                status_box.update(label="❌ Warp Failed", state="error")
-                st.error("Failed to process video dimensions.")
+            # 2. Turbo Processing (Single-Pass: Neural Warp + Subtitles)
+            if ai_mode:
+                status_box.write(f"🚀 [Phase 2] Activating Turbo Engine (Single-Pass Rendering)...")
+                status_box.write(f"🧠 Calibrating Neural Cortex [{selected_model.upper()}]...")
+                
+                # Import new combo function wrapper if needed or direct
+                from graviclip_core import grav_warp_and_subtitle_combo
+                processed = grav_warp_and_subtitle_combo(clip_file, final_file, model_size=selected_model)
+                
+            else:
+                # If no AI, we can use the old separate warp function or just the combo without subs?
+                # But combo forces subs unless we change it.
+                # Use legacy/wrapper for non-AI mode or just warp.
+                # Refactored graviclip_core has wrappers.
+                status_box.write("📐 [Phase 2] Warping dimensions (No AI)...")
+                processed = grav_warp_format(clip_file, final_file)
+
+            if not processed:
+                status_box.update(label="❌ Turbo Engine Stalled", state="error")
+                st.error("Processing failed.")
                 st.stop()
             
-            current_output = warped
-            
-            # 3. Levitation (Optional)
-            if ai_mode:
-                status_box.write("🧠 [Phase 3] AI Levitation (Whisper Transcription)... This may take a moment.")
-                levitated = levitate_subtitles(warped, final_file)
-                if levitated:
-                    current_output = levitated
-                else:
-                    status_box.write("⚠️ Warning: Levitation failed, reverting to warped footage.")
-            else:
-                # If no AI, just rename/use warped as final
-                # We can just use warped file path, or rename it for consistency
-                if os.path.exists(final_file):
-                    os.remove(final_file) # ensure clean slate
-                os.rename(warped, final_file)
-                current_output = final_file
+            current_output = processed
                 
-            status_box.update(label="✅ Gravity Normalization Complete!", state="complete", expanded=False)
+            status_box.update(label="✅ Velocity Maximized. Mission Complete!", state="complete", expanded=False)
             
             # --- Result Display ---
             st.divider()
@@ -142,10 +149,7 @@ if st.button("INITIATE GRAV-DRIVE 🚀"):
                 )
                 
             # --- Cleanup Temporary Files ---
-            # We keep current_output for the download, but clean intermediates
             if os.path.exists(clip_file): os.remove(clip_file)
-            if ai_mode and os.path.exists(warp_file): os.remove(warp_file) # Warp is intermediate if AI is on
-            # If AI was off, warp_file was renamed to final_file, so it's handled.
             
         except Exception as e:
             status_box.update(label="❌ Critical System Failure", state="error")
